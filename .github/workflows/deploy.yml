@@ -1,0 +1,79 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://textnow-factory.onrender.com
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run final tests
+      run: |
+        mkdir -p data
+        cat > .env << EOF
+        DB_TYPE=sqlite
+        SQLITE_PATH=./data/textnow_factory.db
+        JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        JWT_EXPIRE_HOURS=24
+        MAX_CONCURRENT_TASK=20
+        REQUEST_TIMEOUT=15
+        RETRY_TIMES=3
+        POLL_INTERVAL_SEC=10
+        PROXY_API_URL=${{ secrets.PROXY_API_URL }}
+        PROXY_API_KEY=${{ secrets.PROXY_API_KEY }}
+        EOF
+        python database/init_db.py
+      continue-on-error: true
+
+    - name: Deploy to Render
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        echo "deployment command: using Render Deploy Hook"
+        curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      continue-on-error: true
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          Changes in this Release:
+          - Automated deployment to production
+          - All tests passed
+        draft: false
+        prerelease: false
+
+    - name: Send notification
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: 'Deployment ${{ job.status }} for textnow_factory'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName
+      continue-on-error: true

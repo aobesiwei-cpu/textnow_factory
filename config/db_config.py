@@ -5,21 +5,40 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 自动检测数据库类型：SQLite 或 MySQL
-db_type = os.getenv('DB_TYPE', 'sqlite').lower()  # 默认使用 SQLite
+# Auto-detect database type: SQLite or MySQL
+db_type = os.getenv('DB_TYPE', 'sqlite').lower()  # Default to SQLite
 
 if db_type == 'sqlite':
-    # SQLite 配置（Render 免费部署推荐）
+    # SQLite configuration (lightweight, recommended for Render free tier)
+    # Create data directory if it doesn't exist
+    os.makedirs('./data', exist_ok=True)
     db_path = os.getenv('SQLITE_PATH', './data/textnow_factory.db')
+    # Use absolute path to ensure database is found from any working directory
+    db_path = os.path.abspath(db_path)
     DB_URI = f'sqlite:///{db_path}'
+    print(f"[DB Config] Using SQLite: {db_path}")
 else:
-    # MySQL 配置
+    # MySQL configuration
+    db_host = os.getenv('DB_HOST')
+    db_port = os.getenv('DB_PORT', '3306')
+    db_user = os.getenv('DB_USER')
+    db_pass = os.getenv('DB_PASS')
+    db_name = os.getenv('DB_NAME', 'textnow_us')
+    
+    if not all([db_host, db_user, db_pass]):
+        raise ValueError(
+            "MySQL connection requires necessary configuration. "
+            "Please check the following environment variables: "
+            "DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME"
+        )
+    
     DB_URI = (
-        f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}"
-        f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}?charset=utf8mb4"
+        f"mysql+pymysql://{db_user}:{db_pass}"
+        f"@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
     )
+    print(f"[DB Config] Using MySQL: {db_host}:{db_port}/{db_name}")
 
-# 连接池配置
+# Connection pool configuration
 engine = create_engine(
     DB_URI,
     pool_size=10,
@@ -27,4 +46,5 @@ engine = create_engine(
     pool_recycle=300,
     echo=False
 )
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

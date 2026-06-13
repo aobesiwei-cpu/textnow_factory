@@ -3,6 +3,12 @@ TextNow Factory - Web Dashboard (Flask)
 Render 部署入口
 """
 import os
+import sys
+from pathlib import Path
+
+# 添加项目根目录到 Python 路径（解决 Render 部署时模块找不到的问题）
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from flask import Flask, render_template, request, redirect, url_for
 from config.db_config import engine, Base, SessionLocal
 from database.db_models import TbAccount, TbReplyRule, TbAdminUser

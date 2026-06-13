@@ -56,4 +56,6 @@ else:
         echo=False
     )
 
+<<<<<<< HEAD
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+

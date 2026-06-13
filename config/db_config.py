@@ -17,6 +17,14 @@ if db_type == 'sqlite':
     db_path = os.path.abspath(db_path)
     DB_URI = f'sqlite:///{db_path}'
     print(f"[DB Config] Using SQLite: {db_path}")
+    
+    # SQLite connection pool configuration
+    engine = create_engine(
+        DB_URI,
+        connect_args={'timeout': 15},
+        pool_pre_ping=True,
+        echo=False
+    )
 else:
     # MySQL configuration
     db_host = os.getenv('DB_HOST')
@@ -37,14 +45,15 @@ else:
         f"@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
     )
     print(f"[DB Config] Using MySQL: {db_host}:{db_port}/{db_name}")
-
-# Connection pool configuration
-engine = create_engine(
-    DB_URI,
-    pool_size=10,
-    max_overflow=20,
-    pool_recycle=300,
-    echo=False
-)
+    
+    # MySQL connection pool configuration
+    engine = create_engine(
+        DB_URI,
+        pool_size=10,
+        max_overflow=20,
+        pool_recycle=300,
+        pool_pre_ping=True,
+        echo=False
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

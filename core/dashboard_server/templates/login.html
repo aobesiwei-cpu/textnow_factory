@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>后台登录</title>
+    <script src="/static/js/jquery.min.js"></script>
+</head>
+<body>
+<div style="width:300px;margin:100px auto;">
+    <h3>运营管理后台登录</h3>
+    <div>
+        <label>用户名</label>
+        <input type="text" id="username" value="admin">
+    </div>
+    <div style="margin-top:10px;">
+        <label>密码</label>
+        <input type="password" id="pwd">
+    </div>
+    <button id="loginBtn" style="margin-top:15px;width:100%;">登录</button>
+</div>
+<script>
+$("#loginBtn").click(function(){
+    let un = $("#username").val();
+    let pw = $("#pwd").val();
+    $.post("/api/auth/login",{username:un,password:pw},function(res){
+        if(res.code===200){
+            localStorage.setItem("token",res.data.token);
+            location.href="/dashboard";
+        }else{
+            alert(res.msg);
+        }
+    })
+})
+</script>
+</body>
+</html>

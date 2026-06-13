@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运营总控制台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .card-stat {
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        #chart-trend, #chart-status {
+            height: 360px;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">TextNow账号运营管理系统</a>
+        <div class="d-flex align-items-center">
+            <span class="text-light me-3" id="admin-name"></span>
+            <button class="btn btn-outline-light btn-sm" id="logout-btn">退出登录</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white card-stat">
+                <div class="card-body text-center">
+                    <h5>总注册账号</h5>
+                    <h2 id="total-acc">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white card-stat">
+                <div class="card-body text-center">
+                    <h5>正常可用账号</h5>
+                    <h2 id="normal-acc">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark card-stat">
+                <div class="card-body text-center">
+                    <h5>待重试账号</h5>
+                    <h2 id="retry-acc">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white card-stat">
+                <div class="card-body text-center">
+                    <h5>封禁账号</h5>
+                    <h2 id="ban-acc">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">日注册量趋势</div>
+                <div class="card-body">
+                    <div id="chart-trend"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">账号状态分布</div>
+                <div class="card-body">
+                    <div id="chart-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <a href="/account/list" class="btn btn-primary">进入账号列表管理</a>
+            <a href="/rule/list" class="btn btn-secondary ms-2">自动回复规则配置</a>
+        </div>
+    </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/";
+
+// 请求统一封装
+function apiGet(url, cb) {
+    $.ajax({
+        url: url,
+        headers: {"Authorization": token},
+        method: "GET",
+        success: res => {
+            if (res.code === 401) {
+                alert("登录已过期，请重新登录");
+                localStorage.removeItem("token");
+                location.href = "/";
+                return;
+            }
+            cb(res);
+        }
+    })
+}
+
+// 退出登录
+$("#logout-btn").click(()=>{
+    localStorage.removeItem("token");
+    location.href = "/";
+})
+
+// 模拟图表渲染（后端补统计接口后替换真实数据）
+$(function(){
+    // 趋势图
+    const trendChart = echarts.init(document.getElementById('chart-trend'));
+    trendChart.setOption({
+        xAxis: {type: 'category', data: ['06-08','06-09','06-10','06-11','06-12','06-13']},
+        yAxis: {type: 'value'},
+        series: [{name:'注册量', type:'line', data:[120,232,210,334,290,350], smooth:true}]
+    })
+
+    // 饼图
+    const pieChart = echarts.init(document.getElementById('chart-status'));
+    pieChart.setOption({
+        series: [{
+            type: 'pie',
+            radius: '60%',
+            data: [
+                {value:320, name:'正常可用'},
+                {value:45, name:'待重试'},
+                {value:28, name:'已封禁'}
+            ]
+        }]
+    })
+})
+</script>
+</body>
+</html>

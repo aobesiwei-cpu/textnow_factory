@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库服务
+  db:
+    image: mysql:8.0
+    container_name: textnow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: textnow_cs
+      MYSQL_USER: textnow
+      MYSQL_PASSWORD: textnowpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - textnow-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Flask Web 应用服务
+  web:
+    build: .
+    container_name: textnow-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Flask 调试模式（可以看到详细错误）
+      FLASK_DEBUG: "1"
+      FLASK_ENV: "development"
+      # 使用 Docker 内部网络地址
+      TN_IN_DOCKER: "1"
+      TN_DB_HOST: db
+      TN_DB_PORT: 3306
+      TN_DB_USER: root
+      TN_DB_PASS: rootpassword
+      TN_DB_NAME: textnow_cs
+      TN_WEB_HOST: 0.0.0.0
+      TN_WEB_PORT: 8899
+    ports:
+      - "8899:8899"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - textnow-network
+
+  # 可选：phpMyAdmin 数据库管理界面
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: textnow-phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MAX_EXECUTION_TIME: 600
+      MEMORY_LIMIT: 512M
+    ports:
+      - "8080:80"
+    networks:
+      - textnow-network
+
+networks:
+  textnow-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

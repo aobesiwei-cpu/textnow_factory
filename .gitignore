@@ -1,0 +1,29 @@
+# 环境变量敏感文件
+.env
+*.env
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.venv/
+
+# 日志与运行数据
+data/logs/*.log
+*.log
+*.tmp
+*.bak
+
+# 数据库备份SQL
+*_backup.sql
+
+# IDE配置
+.idea/
+.vscode/
+*.sublime-project
+
+# Docker挂载持久化数据
+docker_volume_data/

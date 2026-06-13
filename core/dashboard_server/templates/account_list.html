@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号列表管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .table th, .table td {vertical-align: middle;}
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">← 返回总控制台</a>
+        <div class="d-flex align-items-center">
+            <button class="btn btn-outline-light btn-sm" id="logout-btn">退出登录</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <!-- 筛选区域 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label>账号关键词</label>
+                    <input type="text" id="kw" class="form-control" placeholder="用户名/手机号">
+                </div>
+                <div class="col-auto">
+                    <label>账号状态</label>
+                    <select id="status" class="form-select">
+                        <option value="">全部</option>
+                        <option value="0">正常</option>
+                        <option value="2">待重试</option>
+                        <option value="1">已封禁</option>
+                        <option value="3">配额耗尽</option>
+                    </select>
+                </div>
+                <div class="col-auto mt-4">
+                    <button id="search-btn" class="btn btn-primary">查询</button>
+                    <button id="reset-btn" class="btn btn-outline-secondary">重置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批量操作 -->
+    <div class="mb-3">
+        <button class="btn btn-danger" id="batch-ban">批量封禁选中</button>
+        <button class="btn btn-success ms-2" id="batch-normal">批量恢复正常</button>
+        <button class="btn btn-secondary ms-2" id="export-btn">导出选中账号</button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th width="50"><input type="checkbox" id="check-all"></th>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>手机号</th>
+                        <th>状态</th>
+                        <th>代理分组</th>
+                        <th>重试次数</th>
+                        <th>注册时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr><td colspan="9" class="text-center">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div>每页 <select id="page-size">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+        </select> 条
+        </div>
+        <nav>
+            <ul class="pagination mb-0" id="page-box"></ul>
+        </nav>
+    </div>
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+if (!token) location.href = "/";
+
+let pageNum = 1;
+let pageSize = 10;
+
+// 状态文字映射
+const statusMap = {
+    0:'<span class="text-success">正常</span>',
+    1:'<span class="text-danger">已封禁</span>',
+    2:'<span class="text-warning">待重试</span>',
+    3:'<span class="text-secondary">配额耗尽</span>'
+}
+
+// 加载列表
+function loadList(){
+    const kw = $("#kw").val();
+    const st = $("#status").val();
+    $.ajax({
+        url:`/api/account/list?page=${pageNum}&size=${pageSize}&kw=${kw}&status=${st}`,
+        headers:{"Authorization":token},
+        method:"GET",
+        success:res=>{
+            if(res.code===401){
+                localStorage.removeItem("token");
+                location.href="/";
+                return;
+            }
+            renderTable(res.data.list);
+            renderPage(res.data.total, res.data.pages);
+        }
+    })
+}
+
+// 渲染表格
+function renderTable(list){
+    let html = "";
+    if(list.length===0){
+        html = `<tr><td colspan="9" class="text-center">暂无数据</td></tr>`;
+        $("#table-body").html(html);
+        return;
+    }
+    list.forEach(item=>{
+        html += `
+        <tr>
+            <td><input type="checkbox" class="row-check" data-id="${item.id}"></td>
+            <td>${item.id}</td>
+            <td>${item.username}</td>
+            <td>${item.phone||''}</td>
+            <td>${statusMap[item.status]}</td>
+            <td>${item.proxy_group||''}</td>
+            <td>${item.retry_count}</td>
+            <td>${item.register_time}</td>
+            <td>
+                <button class="btn btn-sm btn-info edit-btn" data-id="${item.id}">编辑</button>
+                <button class="btn btn-sm btn-danger ban-btn" data-id="${item.id}">封禁</button>
+            </td>
+        </tr>`;
+    })
+    $("#table-body").html(html);
+}
+
+// 分页渲染
+function renderPage(total, pages){
+    let pageHtml = "";
+    pageHtml += `<li class="page-item ${pageNum===1?'disabled':''}"><a class="page-link" data-p="${pageNum-1}">上一页</a></li>`;
+    for(let i=1;i<=pages;i++){
+        pageHtml += `<li class="page-item ${pageNum===i?'active':''}"><a class="page-link" data-p="${i}">${i}</a></li>`;
+    }
+    pageHtml += `<li class="page-item ${pageNum===pages?'disabled':''}"><a class="page-link" data-p="${pageNum+1}">下一页</a></li>`;
+    $("#page-box").html(pageHtml);
+}
+
+// 分页点击
+$("#page-box").on("click",".page-link",function(e){
+    e.preventDefault();
+    const p = $(this).data("p");
+    if(!p) return;
+    pageNum = parseInt(p);
+    loadList();
+})
+
+// 全选
+$("#check-all").change(function(){
+    $(".row-check").prop("checked", $(this).prop("checked"));
+})
+
+// 查询
+$("#search-btn").click(()=>{pageNum=1;loadList();})
+$("#reset-btn").click(()=>{
+    $("#kw").val("");
+    $("#status").val("");
+    pageNum=1;
+    loadList();
+})
+$("#page-size").change(()=>{pageSize=parseInt($("#page-size").val());pageNum=1;loadList();})
+
+// 退出
+$("#logout-btn").click(()=>{
+    localStorage.removeItem("token");
+    location.href="/";
+})
+
+$(function(){
+    loadList();
+})
+</script>
+</body>
+</html>

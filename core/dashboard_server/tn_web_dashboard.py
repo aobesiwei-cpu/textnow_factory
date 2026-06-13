@@ -23,9 +23,9 @@ app = Flask(
 app.secret_key = os.getenv("TN_SECRET_KEY", "textnow-cs-secret-key-2026")
 
 # 注册路由蓝图
-from routes.auth_route import auth_bp
-from routes.account_route import account_bp
-from routes.rule_route import rule_bp
+from core.dashboard_server.routes.auth_route import auth_bp
+from core.dashboard_server.routes.account_route import account_bp
+from core.dashboard_server.routes.rule_route import rule_bp
 
 app.register_blueprint(auth_bp, url_prefix='/auth')
 app.register_blueprint(account_bp, url_prefix='/api/accounts')

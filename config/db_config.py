@@ -1,6 +1,6 @@
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,15 +10,12 @@ db_type = os.getenv('DB_TYPE', 'sqlite').lower()  # Default to SQLite
 
 if db_type == 'sqlite':
     # SQLite configuration (lightweight, recommended for Render free tier)
-    # Create data directory if it doesn't exist
     os.makedirs('./data', exist_ok=True)
     db_path = os.getenv('SQLITE_PATH', './data/textnow_factory.db')
-    # Use absolute path to ensure database is found from any working directory
     db_path = os.path.abspath(db_path)
     DB_URI = f'sqlite:///{db_path}'
     print(f"[DB Config] Using SQLite: {db_path}")
     
-    # SQLite connection pool configuration
     engine = create_engine(
         DB_URI,
         connect_args={'timeout': 15},
@@ -46,7 +43,6 @@ else:
     )
     print(f"[DB Config] Using MySQL: {db_host}:{db_port}/{db_name}")
     
-    # MySQL connection pool configuration
     engine = create_engine(
         DB_URI,
         pool_size=10,
@@ -56,6 +52,5 @@ else:
         echo=False
     )
 
-<<<<<<< HEAD
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
+Base = declarative_base()

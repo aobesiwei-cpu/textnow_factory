@@ -18,8 +18,7 @@ if db_type == 'sqlite':
     
     engine = create_engine(
         DB_URI,
-        connect_args={'timeout': 15},
-        pool_pre_ping=True,
+        connect_args={'timeout': 15, 'check_same_thread': False},
         echo=False
     )
 else:
@@ -54,3 +53,11 @@ else:
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# 补充：获取数据库会话的依赖函数（适配 Flask/API）
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
